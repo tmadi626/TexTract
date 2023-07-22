@@ -6,6 +6,6 @@ if __name__ == "__main__":
     # Read the configuration file
     config.read("config.ini")
 
-    # Pass the configuration to the main program
-    # innitiate the program
+    # Innitiate the program
+    # & pass the configuration to the main program
     my_program = my_program.MyProgram(config)
