@@ -12,12 +12,14 @@ class MyProgram:
     file_path = ''
     canvas = None
     image = None
+    manipulated_image = None
 
     def __init__(self, config):
         self.program_name = config.get("General", "ProgramName")
         
         # setting the pytesseract path
-        pytesseract.pytesseract.tesseract_cmd = os.getcwd().join('tesseract.exe')
+        tesseract_file_oath = r'C:\Users\David Mitchell\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+        pytesseract.pytesseract.tesseract_cmd = tesseract_file_oath
         if pytesseract.pytesseract.tesseract_cmd == None:
             messagebox.showerror("Error", "Please install tesseract-ocr first.")
             return
@@ -85,22 +87,12 @@ class MyProgram:
 
                 label = tk.Label(manipulators_frame, text=name)
                 label.grid(row=0, column=0, sticky=tk.W, padx=0)
-                # label.pack(side=tk.LEFT)
-
-                # if name == "Grayscale:":
-                #     grayscale_var = tk.BooleanVar()
-                #     grayscale_var.set(False)
-
-                #     grayscale_checkbox = tk.Checkbutton(manipulators_frame, variable=grayscale_var, text=name, command=self.apply_manipulations)
-                #     grayscale_checkbox.grid(row=0, column=1, padx=5)
-                #     self.manipulators[manipulation] = grayscale_checkbox
 
                 if name == "Rotation":
                     slider = tk.Scale(manipulators_frame, from_=-180, to=180, orient=tk.HORIZONTAL, length=150, command=self.apply_manipulations)
                     slider.set(0)
                     # slider.pack(side=tk.RIGHT)
                     slider.grid(row=0, column=1, padx=5)
-
                     self.manipulators[manipulation] = slider
 
                 else:
@@ -108,8 +100,6 @@ class MyProgram:
                     slider.set(0)
                     # slider.pack(side=tk.RIGHT)
                     slider.grid(row=0, column=1, padx=5)
-
-
                     self.manipulators[manipulation] = slider
 
         # Run the Tkinter main loop
@@ -180,10 +170,10 @@ class MyProgram:
         if self.image is not None:
             try:
                 # Make a copy of the original Pillow image to apply manipulations
-                manipulated_image = self.image.copy()
+                self.manipulated_image = self.image.copy()
 
                 # Convert the Pillow image to a numpy array for OpenCV manipulations
-                np_image = np.array(manipulated_image)
+                np_image = np.array(self.manipulated_image)
 
                 # Apply manipulations to the image based on the slider values
 
@@ -208,9 +198,9 @@ class MyProgram:
                     np_image = cv2.warpAffine(np_image, rotation_matrix, np_image.shape[1::-1], flags=cv2.INTER_LINEAR)
 
                 # Convert the numpy array back to a Pillow Image
-                manipulated_image = Image.fromarray(np_image)
+                self.manipulated_image = Image.fromarray(np_image)
 
-                self.photo_image = ImageTk.PhotoImage(manipulated_image)
+                self.photo_image = ImageTk.PhotoImage(self.manipulated_image)
                 self.display_image_on_canvas(self.photo_image)
             except Exception as e:
                 self.reset_image()
@@ -227,30 +217,10 @@ class MyProgram:
             slider.set(0)
 
     def extract_text(self):
-        # use 
-        if self.photo_image is not None:
-            # Actual_image = cv2.imread(path)
-            # Sample_img = cv2.resize(Actual_image,(400,350))
-            # Image_ht,Image_wd,Image_thickness = self.photo_image.shape
-            # Sample_img = cv2.cvtColor(Sample_img,cv2.COLOR_BGR2RGB)
+        if self.manipulated_image is not None:
             try:
-                texts = pytesseract.image_to_data(self.photo_image) 
-                mytext=""
-                prevy=0
-                for cnt,text in enumerate(texts.splitlines()):
-                    if cnt==0:
-                        continue
-                    text = text.split()
-                    if len(text)==12:
-                        x,y,w,h = int(text[6]),int(text[7]),int(text[8]),int(text[9])
-                        if(len(mytext)==0):
-                            prey=y
-                        if(prevy-y>=10 or y-prevy>=10):
-                            print(mytext)
-                            # Label(root,text=mytext,font=('Times',15,'bold')).pack()
-                            mytext=""
-                        mytext = mytext + text[11]+" "
-                        prevy=y
+                mytext = pytesseract.image_to_string(self.manipulated_image) 
                 messagebox.showinfo("Extracted Text", f"{mytext}")
-            except:
+            except Exception as e:
+                print(e)
                 messagebox.showerror("Error", f"Failed to extract text")
