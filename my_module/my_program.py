@@ -5,21 +5,28 @@ from PIL import Image, ImageTk  # Importing the necessary modules from Pillow
 import cv2
 import numpy as np
 import os
+import pytesseract
 
 class MyProgram:
+    root = None
     file_path = ''
     canvas = None
     image = None
 
     def __init__(self, config):
         self.program_name = config.get("General", "ProgramName")
-        # param1 = config.get("General", "Parameter1")
-        # param2 = config.get("General", "Parameter2")
         
+        # setting the pytesseract path
+        pytesseract.pytesseract.tesseract_cmd = os.getcwd().join('tesseract.exe')
+        if pytesseract.pytesseract.tesseract_cmd == None:
+            messagebox.showerror("Error", "Please install tesseract-ocr first.")
+            return
         # Initialize the GUI
         self.init_gui()
 
-    def init_gui(self):
+
+
+    def init_gui(self): # TODO the check box for gray scale for some reason still showing as a slider
         """
         Initializes the graphical user interface (GUI) for the program.
         This function creates a Tkinter window and sets its title to the program name. The initial size of the window is set to 600x500 pixels.
@@ -33,63 +40,80 @@ class MyProgram:
         Return:
         - None
         """
-        root = tk.Tk()
-        root.title(self.program_name)
+        self.root = tk.Tk()
+        self.root.title(self.program_name)
+
         # Set the minimum size of the window (600x500 pixels)
-        root.minsize(650, 500)
+        self.root.minsize(650, 500)
 
         # Set the initial size of the window
-        root.geometry("600x500")
+        self.root.geometry("600x500")
 
         # Create a label to display the program name
-        label = tk.Label(root, text=self.program_name, font=("Helvetica", 20))
+        label = tk.Label(self.root, text=self.program_name, font=("Helvetica", 20))
         label.pack(pady=10)
 
         # Create the canvas for the rectangular image
-        self.rectangle = tk.Canvas(root, width=300, height=200)
+        self.rectangle = tk.Canvas(self.root, width=300, height=200)
         self.rectangle.pack(pady=5)
 
         # Draw an empty rectangular image on the canvas
         self.rectangle.create_rectangle(10, 10, 290, 190, outline="black", fill="white")
 
 
-        # Create a button to select an image
-        select_button = tk.Button(root, text="Select Image", command=self.select_image)
-        select_button.pack(pady=5)
+        # Create buttons to select an image & extract text
+        buttons_frame = tk.Frame(self.root, width=250)
+        buttons_frame.pack(pady=0)
 
-        # Create sliders for image manipulations
-        self.sliders = {}
-        slider_names = {
-            "grayscale": "Grayscale:",
-            "smoothing": "Smoothing:",
-            "threshold": "Threshold:",
-            "rotation": "Rotation:"
+        select_button = tk.Button(buttons_frame, text="Select Image", command=self.select_image)
+        select_button.grid(row=0, column=0, padx=0)
+        extract_button = tk.Button(buttons_frame, text="Extract Text", command=self.extract_text)
+        extract_button.grid(row=0, column=1, padx=0)
+
+        # Create manipulators for image manipulations
+        self.manipulators = {}
+        manipulators_names = {
+            "grayscale": "Grayscale",
+            "smoothing": "Smoothing",
+            "threshold": "Threshold",
+            "rotation": "Rotation"
         }
 
-        for manipulation, name in slider_names.items():
-                slider_frame = tk.Frame(root, width=250)
-                slider_frame.pack(pady=0)
+        for manipulation, name in manipulators_names.items():
+                manipulators_frame = tk.Frame(self.root, width=250)
+                manipulators_frame.pack(pady=0)
 
-                label = tk.Label(slider_frame, text=name)
+                label = tk.Label(manipulators_frame, text=name)
                 label.grid(row=0, column=0, sticky=tk.W, padx=0)
                 # label.pack(side=tk.LEFT)
-                if name == "Rotation:":
-                    slider = tk.Scale(slider_frame, from_=-180, to=180, orient=tk.HORIZONTAL, length=150, command=self.apply_manipulations)
+
+                # if name == "Grayscale:":
+                #     grayscale_var = tk.BooleanVar()
+                #     grayscale_var.set(False)
+
+                #     grayscale_checkbox = tk.Checkbutton(manipulators_frame, variable=grayscale_var, text=name, command=self.apply_manipulations)
+                #     grayscale_checkbox.grid(row=0, column=1, padx=5)
+                #     self.manipulators[manipulation] = grayscale_checkbox
+
+                if name == "Rotation":
+                    slider = tk.Scale(manipulators_frame, from_=-180, to=180, orient=tk.HORIZONTAL, length=150, command=self.apply_manipulations)
                     slider.set(0)
                     # slider.pack(side=tk.RIGHT)
                     slider.grid(row=0, column=1, padx=5)
+
+                    self.manipulators[manipulation] = slider
 
                 else:
-                    slider = tk.Scale(slider_frame, from_=0, to=255, orient=tk.HORIZONTAL, length=150, command=self.apply_manipulations)
+                    slider = tk.Scale(manipulators_frame, from_=0, to=255, orient=tk.HORIZONTAL, length=150, command=self.apply_manipulations)
                     slider.set(0)
                     # slider.pack(side=tk.RIGHT)
                     slider.grid(row=0, column=1, padx=5)
 
 
-                self.sliders[manipulation] = slider
+                    self.manipulators[manipulation] = slider
 
         # Run the Tkinter main loop
-        root.mainloop()
+        self.root.mainloop()
 
     def select_image(self):
         """
@@ -147,10 +171,10 @@ class MyProgram:
 
     def apply_manipulations(self, _=None):
         # Get the slider values
-        grayscale_value = int(self.sliders["grayscale"].get())
-        smoothing_value = int(self.sliders["smoothing"].get())
-        threshold_value = int(self.sliders["threshold"].get())
-        rotation_value = int(self.sliders["rotation"].get())
+        grayscale_value = int(self.manipulators["grayscale"].get()) # TODO
+        smoothing_value = int(self.manipulators["smoothing"].get())
+        threshold_value = float(self.manipulators["threshold"].get())
+        rotation_value = int(self.manipulators["rotation"].get())
 
         # Update the displayed image
         if self.image is not None:
@@ -166,7 +190,7 @@ class MyProgram:
                 # Grayscale conversion
                 if grayscale_value > 0:
                     np_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
-                    np_image = cv2.merge((np_image, np_image, np_image))
+                    np_image = cv2.merge((np_image, np_image, np_image)) # making 3 channels
 
                 # Smoothing (blur)
                 if smoothing_value > 0:
@@ -174,9 +198,8 @@ class MyProgram:
                     np_image = cv2.GaussianBlur(np_image, kernel_size, 0)
 
                 # Thresholding
-                if threshold_value > 0:
-                    _, thresholded_image = cv2.threshold(np_image, threshold_value, 255, cv2.THRESH_BINARY)
-                    np_image = cv2.cvtColor(thresholded_image, cv2.COLOR_GRAY2RGB)
+                if grayscale_value and threshold_value > 0:
+                    _, np_image = cv2.threshold(np_image, threshold_value, 255, cv2.THRESH_BINARY)
 
                 # Rotation
                 if rotation_value != 0:
@@ -200,9 +223,34 @@ class MyProgram:
 
     def reset_sliders(self):
         # enable all sliders and reset them
-        for slider in self.sliders.values():
+        for slider in self.manipulators.values():
             slider.set(0)
 
-        
-    def run(self):
-        print(f"Running {self.program_name}")
+    def extract_text(self):
+        # use 
+        if self.photo_image is not None:
+            # Actual_image = cv2.imread(path)
+            # Sample_img = cv2.resize(Actual_image,(400,350))
+            # Image_ht,Image_wd,Image_thickness = self.photo_image.shape
+            # Sample_img = cv2.cvtColor(Sample_img,cv2.COLOR_BGR2RGB)
+            try:
+                texts = pytesseract.image_to_data(self.photo_image) 
+                mytext=""
+                prevy=0
+                for cnt,text in enumerate(texts.splitlines()):
+                    if cnt==0:
+                        continue
+                    text = text.split()
+                    if len(text)==12:
+                        x,y,w,h = int(text[6]),int(text[7]),int(text[8]),int(text[9])
+                        if(len(mytext)==0):
+                            prey=y
+                        if(prevy-y>=10 or y-prevy>=10):
+                            print(mytext)
+                            # Label(root,text=mytext,font=('Times',15,'bold')).pack()
+                            mytext=""
+                        mytext = mytext + text[11]+" "
+                        prevy=y
+                messagebox.showinfo("Extracted Text", f"{mytext}")
+            except:
+                messagebox.showerror("Error", f"Failed to extract text")
