@@ -10,6 +10,7 @@ import pytesseract
 class MyProgram:
     root = None
     file_path = ''
+    tesseract_file_path = ''
     canvas = None
     image = None
     manipulated_image = None
@@ -18,11 +19,9 @@ class MyProgram:
         self.program_name = config.get("General", "ProgramName")
         
         # setting the pytesseract path
-        tesseract_file_oath = r'C:\Users\David Mitchell\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
-        pytesseract.pytesseract.tesseract_cmd = tesseract_file_oath
-        if pytesseract.pytesseract.tesseract_cmd == None:
-            messagebox.showerror("Error", "Please install tesseract-ocr first.")
-            return
+        self.choose_tesseract_exe()
+
+        
         # Initialize the GUI
         self.init_gui()
 
@@ -125,6 +124,14 @@ class MyProgram:
             else:
                 messagebox.showerror("Invalid File", "The selected file is not a valid image.")
 
+    def choose_tesseract_exe(self):
+        self.tesseract_file_path = filedialog.askopenfilename(title="Select tesseract.exe", filetypes=[("Executable files", "*.exe;")])
+        if "tesseract.exe" not in  self.tesseract_file_path:
+            messagebox.showerror("Error", "Please install tesseract-ocr first.")
+            return
+        else:
+            pytesseract.pytesseract.tesseract_cmd = self.tesseract_file_path
+        
     def load_image(self, file_path):
 
         # Reset the sliders
