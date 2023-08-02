@@ -7,7 +7,7 @@ To run the app:
 - Need to download [tesseract] first.
 
 - For Windows 64bit, you can do that by running the file [tesseract-ocr-w64-setup-5.3.1.20230401] or 
-  through this link [https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe].
+  through this [link](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe).
 
 - For Mac, you can run this command: `brew install tesseract`
 
